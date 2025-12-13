@@ -34,7 +34,7 @@ public class SeederService {
 
         // 1. CRÉATION SUPER ADMIN
         Personne adminPersonne = getOrCreatePersonne(
-            "AKOWE", "Darius", Poste.MANAGER
+            "AKOWE", "Darius", Poste.ADMIN
         );
 
         utilisateurRepository.findByIdentifiant("akowedarius")

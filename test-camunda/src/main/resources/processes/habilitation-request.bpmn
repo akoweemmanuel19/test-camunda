@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                  id="Definitions_Habilitation" 
+                  targetNamespace="http://bpmn.io/schema/bpmn" 
+                  exporter="Camunda Modeler" 
+                  exporterVersion="5.0.0">
+  
+  <bpmn:process id="habilitation-request" name="Demande d'Habilitation Système" isExecutable="true" camunda:historyTimeToLive="180">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_Habilitation" name="Demande d'habilitation initiée">
+      <bpmn:outgoing>Flow_To_AutoValidation</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Validation automatique des prérequis -->
+    <bpmn:serviceTask id="Service_AutoValidation" 
+                      name="Vérification automatique des prérequis" 
+                      camunda:class="bj.ent.habilitation.delegate.PrerequisiteCheckDelegate">
+      <bpmn:incoming>Flow_To_AutoValidation</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_PrerequisiteGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_AutoValidation" sourceRef="StartEvent_Habilitation" targetRef="Service_AutoValidation" />
+    
+    <!-- Gateway - Prérequis validés ? -->
+    <bpmn:exclusiveGateway id="Gateway_Prerequisite" name="Prérequis OK ?">
+      <bpmn:incoming>Flow_To_PrerequisiteGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Prerequisite_OK</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Prerequisite_KO</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <bpmn:sequenceFlow id="Flow_To_PrerequisiteGateway" sourceRef="Service_AutoValidation" targetRef="Gateway_Prerequisite" />
+    
+    <!-- Si prérequis KO - Rejet automatique -->
+    <bpmn:sequenceFlow id="Flow_Prerequisite_KO" name="Non" sourceRef="Gateway_Prerequisite" targetRef="Service_RejectAuto">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${prerequisiteValid == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:serviceTask id="Service_RejectAuto" 
+                      name="Rejet automatique" 
+                      camunda:class="bj.ent.habilitation.delegate.AutoRejectDelegate">
+      <bpmn:incoming>Flow_Prerequisite_KO</bpmn:incoming>
+      <bpmn:outgoing>Flow_RejectAuto_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_RejectAuto_To_End" sourceRef="Service_RejectAuto" targetRef="EndEvent_Rejected" />
+    
+    <!-- Si prérequis OK - Validation N+1 (Manager) -->
+    <bpmn:sequenceFlow id="Flow_Prerequisite_OK" name="Oui" sourceRef="Gateway_Prerequisite" targetRef="Task_ManagerApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${prerequisiteValid == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:userTask id="Task_ManagerApproval" 
+                   name="Validation N+1 (Manager)" 
+                   camunda:assignee="${managerId}"
+                   camunda:candidateGroups="managers">
+      <bpmn:incoming>Flow_Prerequisite_OK</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_ManagerGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_ManagerGateway" sourceRef="Task_ManagerApproval" targetRef="Gateway_ManagerDecision" />
+    
+    <!-- Gateway - Manager approuve ? -->
+    <bpmn:exclusiveGateway id="Gateway_ManagerDecision" name="Manager approuve ?">
+      <bpmn:incoming>Flow_To_ManagerGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manager_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Manager_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Si Manager rejette -->
+    <bpmn:sequenceFlow id="Flow_Manager_Rejected" name="Rejeté" sourceRef="Gateway_ManagerDecision" targetRef="Service_UpdateStatus_Rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerApproved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- Si Manager approuve - Validation N+2 (Responsable Sécurité) -->
+    <bpmn:sequenceFlow id="Flow_Manager_Approved" name="Approuvé" sourceRef="Gateway_ManagerDecision" targetRef="Gateway_SecurityNeeded">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerApproved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- Gateway - Validation sécurité requise ? (selon le niveau d'habilitation) -->
+    <bpmn:exclusiveGateway id="Gateway_SecurityNeeded" name="Validation sécurité requise ?">
+      <bpmn:incoming>Flow_Manager_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Security_Required</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Security_NotRequired</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Si validation sécurité non requise (habilitation basique) -->
+    <bpmn:sequenceFlow id="Flow_Security_NotRequired" name="Non requis" sourceRef="Gateway_SecurityNeeded" targetRef="Service_ProvisionAccess">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${habilitationLevel &lt; 3}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- Si validation sécurité requise (habilitation élevée) -->
+    <bpmn:sequenceFlow id="Flow_Security_Required" name="Requis" sourceRef="Gateway_SecurityNeeded" targetRef="Task_SecurityApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${habilitationLevel >= 3}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:userTask id="Task_SecurityApproval" 
+                   name="Validation Responsable Sécurité" 
+                   camunda:assignee="${securityOfficerId}"
+                   camunda:candidateGroups="security-officers">
+      <bpmn:incoming>Flow_Security_Required</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_SecurityGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_SecurityGateway" sourceRef="Task_SecurityApproval" targetRef="Gateway_SecurityDecision" />
+    
+    <!-- Gateway - Responsable sécurité approuve ? -->
+    <bpmn:exclusiveGateway id="Gateway_SecurityDecision" name="Sécurité approuve ?">
+      <bpmn:incoming>Flow_To_SecurityGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Security_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Security_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <bpmn:sequenceFlow id="Flow_Security_Approved" name="Approuvé" sourceRef="Gateway_SecurityDecision" targetRef="Service_ProvisionAccess">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${securityApproved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_Security_Rejected" name="Rejeté" sourceRef="Gateway_SecurityDecision" targetRef="Service_UpdateStatus_Rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${securityApproved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <!-- Provisionnement automatique des accès -->
+    <bpmn:serviceTask id="Service_ProvisionAccess" 
+                      name="Provisionnement des accès" 
+                      camunda:class="bj.ent.habilitation.delegate.ProvisionAccessDelegate">
+      <bpmn:incoming>Flow_Security_NotRequired</bpmn:incoming>
+      <bpmn:incoming>Flow_Security_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Notification</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_Notification" sourceRef="Service_ProvisionAccess" targetRef="Service_NotifyUser" />
+    
+    <!-- Notification à l'utilisateur -->
+    <bpmn:serviceTask id="Service_NotifyUser" 
+                      name="Notification utilisateur" 
+                      camunda:class="bj.ent.habilitation.delegate.NotificationDelegate">
+      <bpmn:incoming>Flow_To_Notification</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_UpdateApproved</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_UpdateApproved" sourceRef="Service_NotifyUser" targetRef="Service_UpdateStatus_Approved" />
+    
+    <!-- Mise à jour statut APPROUVÉ -->
+    <bpmn:serviceTask id="Service_UpdateStatus_Approved" 
+                      name="Mise à jour statut APPROUVÉ" 
+                      camunda:class="bj.ent.habilitation.delegate.UpdateStatusDelegate">
+      <bpmn:incoming>Flow_To_UpdateApproved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_Approved_To_End" sourceRef="Service_UpdateStatus_Approved" targetRef="EndEvent_Approved" />
+    
+    <!-- Mise à jour statut REJETÉ -->
+    <bpmn:serviceTask id="Service_UpdateStatus_Rejected" 
+                      name="Mise à jour statut REJETÉ" 
+                      camunda:class="bj.ent.habilitation.delegate.UpdateStatusDelegate">
+      <bpmn:incoming>Flow_Manager_Rejected</bpmn:incoming>
+      <bpmn:incoming>Flow_Security_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_Rejected_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:sequenceFlow id="Flow_Rejected_To_End" sourceRef="Service_UpdateStatus_Rejected" targetRef="EndEvent_Rejected" />
+    
+    <!-- End Events -->
+    <bpmn:endEvent id="EndEvent_Approved" name="Habilitation accordée">
+      <bpmn:incoming>Flow_Approved_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:endEvent id="EndEvent_Rejected" name="Habilitation refusée">
+      <bpmn:incoming>Flow_Rejected_To_End</bpmn:incoming>
+      <bpmn:incoming>Flow_RejectAuto_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+    
+  </bpmn:process>
+</bpmn:definitions>

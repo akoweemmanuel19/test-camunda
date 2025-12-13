@@ -4,5 +4,6 @@ public enum Poste {
     DEVELOPPEUR,
     MANAGER,
     TESTEUR,
-    ANALYSTE
+    ANALYSTE,
+    ADMIN
 }

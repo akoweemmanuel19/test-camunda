@@ -1,44 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler"  exporterVersion="5.0.0">
-  <bpmn:process id="leave-request" name="Demande de Congés" isExecutable="true" camunda:historyTimeToLive="60">
-    
-    <bpmn:startEvent id="StartEvent_1" name="Demande reçue">
-      <bpmn:outgoing>Flow_To_Manager</bpmn:outgoing>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_0fk56rs" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.9.0">
+  <bpmn:process id="Process_1fgavd9" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_00j2ur2" name="Demande reçue">
+      <bpmn:outgoing>Flow_0un0mew</bpmn:outgoing>
     </bpmn:startEvent>
-    
-    <bpmn:userTask id="Activity_ManagerApproval" name="Valider la demande" camunda:assignee="${managerId}">
-      <bpmn:incoming>Flow_To_Manager</bpmn:incoming>
-      <bpmn:outgoing>Flow_To_Gateway</bpmn:outgoing>
+    <bpmn:userTask id="Activity_127kinb" name="Valider la demande">
+      <bpmn:incoming>Flow_0un0mew</bpmn:incoming>
+      <bpmn:outgoing>Flow_17jsnh9</bpmn:outgoing>
     </bpmn:userTask>
-    
-    <bpmn:sequenceFlow id="Flow_To_Manager" sourceRef="StartEvent_1" targetRef="Activity_ManagerApproval" />
-    <bpmn:sequenceFlow id="Flow_To_Gateway" sourceRef="Activity_ManagerApproval" targetRef="Gateway_Decision" />
-    
-    <bpmn:exclusiveGateway id="Gateway_Decision" name="Approuvé ?">
-      <bpmn:incoming>Flow_To_Gateway</bpmn:incoming>
-      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>
-      <bpmn:outgoing>Flow_No</bpmn:outgoing>
+    <bpmn:sequenceFlow id="Flow_0un0mew" sourceRef="StartEvent_00j2ur2" targetRef="Activity_127kinb" />
+    <bpmn:exclusiveGateway id="Gateway_0i4yyjy">
+      <bpmn:incoming>Flow_17jsnh9</bpmn:incoming>
+      <bpmn:outgoing>Flow_0h1nn8r</bpmn:outgoing>
+      <bpmn:outgoing>Flow_13imfiy</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    
-    <bpmn:sequenceFlow id="Flow_Yes" name="Oui" sourceRef="Gateway_Decision" targetRef="Service_Update_Status">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    
-    <bpmn:sequenceFlow id="Flow_No" name="Non" sourceRef="Gateway_Decision" targetRef="Service_Update_Status">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    
-    <bpmn:serviceTask id="Service_Update_Status" name="Mise à jour Statut JPA" camunda:class="bj.ent.test_camunda.delegate.UpdateStatusDelegate">
-      <bpmn:incoming>Flow_Yes</bpmn:incoming>
-      <bpmn:incoming>Flow_No</bpmn:incoming>
-      <bpmn:outgoing>Flow_To_End</bpmn:outgoing>
+    <bpmn:sequenceFlow id="Flow_17jsnh9" sourceRef="Activity_127kinb" targetRef="Gateway_0i4yyjy" />
+    <bpmn:serviceTask id="Activity_0ue9wxo" name="Mise à jour Statut JPA">
+      <bpmn:incoming>Flow_0h1nn8r</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fwv8y9</bpmn:outgoing>
     </bpmn:serviceTask>
-    
-    <bpmn:endEvent id="EndEvent_1" name="Processus Terminé">
-      <bpmn:incoming>Flow_To_End</bpmn:incoming>
+    <bpmn:sequenceFlow id="Flow_0h1nn8r" name="oui" sourceRef="Gateway_0i4yyjy" targetRef="Activity_0ue9wxo" />
+    <bpmn:endEvent id="Event_1wvx5a8" name="Processus Terminé">
+      <bpmn:incoming>Flow_13imfiy</bpmn:incoming>
+      <bpmn:incoming>Flow_0fwv8y9</bpmn:incoming>
     </bpmn:endEvent>
-    
-    <bpmn:sequenceFlow id="Flow_To_End" sourceRef="Service_Update_Status" targetRef="EndEvent_1" />
-    
+    <bpmn:sequenceFlow id="Flow_13imfiy" name="non" sourceRef="Gateway_0i4yyjy" targetRef="Event_1wvx5a8" />
+    <bpmn:sequenceFlow id="Flow_0fwv8y9" sourceRef="Activity_0ue9wxo" targetRef="Event_1wvx5a8" />
   </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1fgavd9">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_00j2ur2">
+        <dc:Bounds x="156" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="135" y="125" width="79" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_127kinb_di" bpmnElement="Activity_127kinb">
+        <dc:Bounds x="290" y="60" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0i4yyjy_di" bpmnElement="Gateway_0i4yyjy" isMarkerVisible="true">
+        <dc:Bounds x="475" y="75" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ue9wxo_di" bpmnElement="Activity_0ue9wxo">
+        <dc:Bounds x="630" y="60" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1wvx5a8_di" bpmnElement="Event_1wvx5a8">
+        <dc:Bounds x="482" y="212" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="474" y="255" width="52" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0un0mew_di" bpmnElement="Flow_0un0mew">
+        <di:waypoint x="192" y="100" />
+        <di:waypoint x="290" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17jsnh9_di" bpmnElement="Flow_17jsnh9">
+        <di:waypoint x="390" y="100" />
+        <di:waypoint x="475" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0h1nn8r_di" bpmnElement="Flow_0h1nn8r">
+        <di:waypoint x="525" y="100" />
+        <di:waypoint x="630" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="570" y="82" width="16" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13imfiy_di" bpmnElement="Flow_13imfiy">
+        <di:waypoint x="500" y="125" />
+        <di:waypoint x="500" y="212" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="506" y="166" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fwv8y9_di" bpmnElement="Flow_0fwv8y9">
+        <di:waypoint x="680" y="140" />
+        <di:waypoint x="680" y="230" />
+        <di:waypoint x="518" y="230" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 </bpmn:definitions>
