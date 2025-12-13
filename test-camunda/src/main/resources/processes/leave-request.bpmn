@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler"  exporterVersion="5.0.0">
+  <bpmn:process id="leave-request" name="Demande de Congés" isExecutable="true" camunda:historyTimeToLive="60">
+    
+    <bpmn:startEvent id="StartEvent_1" name="Demande reçue">
+      <bpmn:outgoing>Flow_To_Manager</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:userTask id="Activity_ManagerApproval" name="Valider la demande" camunda:assignee="${managerId}">
+      <bpmn:incoming>Flow_To_Manager</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <bpmn:sequenceFlow id="Flow_To_Manager" sourceRef="StartEvent_1" targetRef="Activity_ManagerApproval" />
+    <bpmn:sequenceFlow id="Flow_To_Gateway" sourceRef="Activity_ManagerApproval" targetRef="Gateway_Decision" />
+    
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Approuvé ?">
+      <bpmn:incoming>Flow_To_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <bpmn:sequenceFlow id="Flow_Yes" name="Oui" sourceRef="Gateway_Decision" targetRef="Service_Update_Status">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_No" name="Non" sourceRef="Gateway_Decision" targetRef="Service_Update_Status">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:serviceTask id="Service_Update_Status" name="Mise à jour Statut JPA" camunda:class="bj.ent.test_camunda.delegate.UpdateStatusDelegate">
+      <bpmn:incoming>Flow_Yes</bpmn:incoming>
+      <bpmn:incoming>Flow_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="EndEvent_1" name="Processus Terminé">
+      <bpmn:incoming>Flow_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_To_End" sourceRef="Service_Update_Status" targetRef="EndEvent_1" />
+    
+  </bpmn:process>
+</bpmn:definitions>
