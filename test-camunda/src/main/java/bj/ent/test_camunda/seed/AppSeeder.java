@@ -1,10 +1,11 @@
 package bj.ent.test_camunda.seed;
 
 import bj.ent.test_camunda.model.Personne;
-import bj.ent.test_camunda.enums.Poste; // Attention: Assurez-vous que votre Enum est bien dans ce package
+import bj.ent.test_camunda.enums.Poste;
 import bj.ent.test_camunda.model.Utilisateur;
 import bj.ent.test_camunda.repository.PersonneRepository;
 import bj.ent.test_camunda.repository.UtilisateurRepository;
+import jakarta.persistence.EntityManager; // Importation nécessaire
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,21 +14,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Configuration
 public class AppSeeder {
 
-    // --- Fonction Helper pour Créer ou Récupérer une Personne ---
-    // Cette fonction garantit que l'entité Personne retournée est gérée (managed)
-    // par la transaction actuelle si elle est créée ou attachée si elle est trouvée.
-    private Personne getOrCreatePersonne(PersonneRepository repo, String nom, String prenom, Poste poste) {
-         return repo.findByNomAndPrenom(nom, prenom)
+    // Injecter l'EntityManager pour utiliser merge()
+    private final EntityManager entityManager;
+
+    public AppSeeder(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
+    // Fonction Helper pour Créer, Récupérer, et S'ASSURER que la Personne est attachée (MERGED)
+    private Personne getOrCreateAndMergePersonne(PersonneRepository repo, String nom, String prenom, Poste poste) {
+         Personne p = repo.findByNomAndPrenom(nom, prenom)
                 .orElseGet(() -> {
-                    Personne p = new Personne(nom, prenom, poste);
-                    // L'appel à save() attache l'entité à la session JPA
-                    return repo.save(p); 
+                    Personne newP = new Personne(nom, prenom, poste);
+                    // Sauvegarde initiale (optionnel, mais garde la logique de création)
+                    return repo.save(newP); 
                 });
+        
+        // !!! C'EST LA CLÉ !!! : Raccrocher l'entité à la session si elle était détachée
+        // merge() retourne l'instance managée que nous allons utiliser.
+        return entityManager.merge(p);
     }
     
-    // --- Lancement du Seeder ---
     @Bean
-    @Transactional // Nécessaire pour les opérations de base de données
+    @Transactional
     public CommandLineRunner initDatabase(
             PersonneRepository personneRepository,
             UtilisateurRepository utilisateurRepository
@@ -39,11 +48,11 @@ public class AppSeeder {
             // 1. CRÉATION DU SUPER ADMIN : AKOWE Darius
             // =========================================================
 
-            Personne adminPersonne = getOrCreatePersonne(
+            Personne adminPersonneAttached = getOrCreateAndMergePersonne(
                 personneRepository, 
                 "AKOWE", 
                 "Darius", 
-                Poste.MANAGER // Le super admin est aussi un manager
+                Poste.MANAGER
             );
 
             utilisateurRepository.findByIdentifiant("akowedarius")
@@ -55,18 +64,17 @@ public class AppSeeder {
                                 Utilisateur u = new Utilisateur();
                                 u.setIdentifiant("akowedarius");
                                 u.setMotDePasse("root"); 
-                                u.setPersonne(adminPersonne); // L'entité Personne est attachée
+                                u.setPersonne(adminPersonneAttached); // Entité garantie attachée
                                 utilisateurRepository.save(u);
                                 System.out.println("✅ Utilisateur Super Admin AKOWE Darius créé.");
                             }
                     );
 
             // =========================================================
-            // 2. CRÉATION DES DONNÉES DE TEST (Employé et Manager)
+            // 2. CRÉATION DES DONNÉES DE TEST
             // =========================================================
 
-            // Employé de test (Alice)
-            Personne alicePersonne = getOrCreatePersonne(
+            Personne alicePersonneAttached = getOrCreateAndMergePersonne(
                 personneRepository, 
                 "Alice", 
                 "Demo", 
@@ -75,19 +83,18 @@ public class AppSeeder {
 
             utilisateurRepository.findByIdentifiant("alice_d")
                     .ifPresentOrElse(
-                            u -> { /* Do nothing if exists */ },
+                            u -> { /* ... */ },
                             () -> {
                                 Utilisateur u = new Utilisateur();
                                 u.setIdentifiant("alice_d");
                                 u.setMotDePasse("pass"); 
-                                u.setPersonne(alicePersonne);
+                                u.setPersonne(alicePersonneAttached);
                                 utilisateurRepository.save(u);
                                 System.out.println("✅ Utilisateur de test Alice créé.");
                             }
                     );
             
-            // Manager de test (Boss)
-            Personne bossPersonne = getOrCreatePersonne(
+            Personne bossPersonneAttached = getOrCreateAndMergePersonne(
                 personneRepository,
                 "Manager",
                 "Boss",
@@ -96,12 +103,12 @@ public class AppSeeder {
             
             utilisateurRepository.findByIdentifiant("boss_m")
                     .ifPresentOrElse(
-                            u -> { /* Do nothing if exists */ },
+                            u -> { /* ... */ },
                             () -> {
                                 Utilisateur u = new Utilisateur();
                                 u.setIdentifiant("boss_m");
                                 u.setMotDePasse("pass");
-                                u.setPersonne(bossPersonne);
+                                u.setPersonne(bossPersonneAttached);
                                 utilisateurRepository.save(u);
                                 System.out.println("✅ Utilisateur de test Manager Boss créé.");
                             }
