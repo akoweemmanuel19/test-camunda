@@ -1,7 +1,10 @@
 package bj.ent.test_camunda.controller;
 
+import bj.ent.test_camunda.enums.Poste;
 import bj.ent.test_camunda.model.LeaveRequest;
+import bj.ent.test_camunda.model.Personne;
 import bj.ent.test_camunda.model.Utilisateur;
+import bj.ent.test_camunda.repository.PersonneRepository;
 import bj.ent.test_camunda.service.LeaveRequestService;
 import bj.ent.test_camunda.service.UtilisateurService;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +19,13 @@ public class AppController {
 
     private final LeaveRequestService leaveRequestService;
     private final UtilisateurService utilisateurService;
+    private final PersonneRepository personneRepository;
 
-    public AppController(LeaveRequestService leaveRequestService, UtilisateurService utilisateurService) {
+    public AppController(LeaveRequestService leaveRequestService, UtilisateurService utilisateurService,
+            PersonneRepository personneRepository) {
         this.leaveRequestService = leaveRequestService;
         this.utilisateurService = utilisateurService;
+        this.personneRepository = personneRepository;
     }
 
     // --- AUTHENTIFICATION (Simplifiée) ---
@@ -30,7 +36,8 @@ public class AppController {
 
     // --- EMPLOYE : Créer Brouillon ---
     @PostMapping("/requests/draft")
-    public ResponseEntity<LeaveRequest> createDraft(@RequestParam Long userId, @RequestParam Integer days, @RequestParam Long managerId) {
+    public ResponseEntity<LeaveRequest> createDraft(@RequestParam Long userId, @RequestParam Integer days,
+            @RequestParam Long managerId) {
         // Note: userId correspond ici à l'ID de la Personne liée à l'utilisateur
         Utilisateur u = utilisateurService.getUtilisateurById(userId);
         return ResponseEntity.ok(leaveRequestService.createDraft(u.getPersonne().getId(), days, managerId));
@@ -41,7 +48,7 @@ public class AppController {
     public ResponseEntity<LeaveRequest> updateDraft(@PathVariable Long id, @RequestParam Integer days) {
         return ResponseEntity.ok(leaveRequestService.updateDraft(id, days));
     }
-    
+
     // --- EMPLOYE : Supprimer Brouillon ---
     @DeleteMapping("/requests/{id}")
     public ResponseEntity<Void> deleteDraft(@PathVariable Long id) {
@@ -62,6 +69,11 @@ public class AppController {
         return ResponseEntity.ok(leaveRequestService.getEmployeeRequests(u.getPersonne().getId()));
     }
 
+    @GetMapping("/manager")
+    public List<Personne> getManagers() {
+        return personneRepository.findByPoste(Poste.MANAGER);
+    }
+
     // --- MANAGER : Voir les demandes à traiter ---
     @GetMapping("/manager/requests")
     public ResponseEntity<List<LeaveRequest>> getManagerRequests(@RequestParam Long userId) {
@@ -78,5 +90,8 @@ public class AppController {
 }
 
 // DTOs
-record LoginDto(String identifiant, String motDePasse) {}
-record DecisionDto(boolean approved, String comment) {}
+record LoginDto(String identifiant, String motDePasse) {
+}
+
+record DecisionDto(boolean approved, String comment) {
+}

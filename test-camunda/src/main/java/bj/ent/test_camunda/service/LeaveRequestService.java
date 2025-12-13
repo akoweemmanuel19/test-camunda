@@ -83,7 +83,8 @@ public class LeaveRequestService {
         Map<String, Object> variables = Map.of(
             "leaveRequestId", request.getId(),
             "employeeName", request.getEmployee().getNom(),
-            "managerId", request.getManager().getId(), // Utile pour assigner la tâche
+            "employeeId", request.getEmployee().getId().toString(),
+            "managerId", request.getManager().getId().toString(), // Utile pour assigner la tâche
             "numberOfDays", request.getNumberOfDays()
         );
 
