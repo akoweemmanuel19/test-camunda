@@ -14,11 +14,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/camunda")
-@RequiredArgsConstructor
-// Assurez-vous que seul l'ADMIN peut accéder à ces endpoints via Spring Security
 public class AdminCamundaController {
 
     private final AdminCamundaService adminCamundaService;
+
+    public AdminCamundaController(AdminCamundaService adminCamundaService) {
+        this.adminCamundaService = adminCamundaService;
+    }
 
     // POST /api/admin/camunda/deploy
     @PostMapping("/deploy")

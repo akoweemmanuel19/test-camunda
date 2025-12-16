@@ -1,5 +1,7 @@
 package bj.ent.test_camunda.controller;
 
+import bj.ent.test_camunda.dto.DecisionDto;
+import bj.ent.test_camunda.dto.LoginDto;
 import bj.ent.test_camunda.enums.Poste;
 import bj.ent.test_camunda.model.LeaveRequest;
 import bj.ent.test_camunda.model.Personne;
@@ -89,9 +91,4 @@ public class AppController {
     }
 }
 
-// DTOs
-record LoginDto(String identifiant, String motDePasse) {
-}
 
-record DecisionDto(boolean approved, String comment) {
-}
